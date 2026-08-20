@@ -18,7 +18,7 @@ function canonicalJson(v) {
 }
 const sha256hex = (s) => createHash('sha256').update(s, 'utf8').digest('hex')
 const GENESIS = '0'.repeat(64)
-const MAGIC = Buffer.from('004f70656e54696d657374616d70730000', 'hex')
+const MAGIC = Buffer.from('004f70656e54696d657374616d7073000050726f6f6600bf89e2e884e89294', 'hex')
 let failures = 0
 const fail = (m) => { console.error('EȘEC: ' + m); failures++ }
 const okm = (m) => console.log('  ✓ ' + m)
@@ -107,7 +107,12 @@ okm(anchored + '/' + log.anchors.length + ' ancore per-salon verificate')
 
 console.log('7) INCLUSION PROOF în root-ul de rețea…')
 const incl = await (await fetch(log.network.inclusionProofUrl)).json()
-if (incl.entryHash !== log.head.entryHash) fail('inclusion proof e pentru alt head decât cel publicat')
+if (incl.entryHash !== log.head.entryHash) {
+  const ancestor = entries.find((e) => e.entryHash === incl.entryHash)
+  ancestor
+    ? okm('notă: inclusion proof e pentru head-ul din ziua ancorării (seq ' + incl.seq + '), un strămoș valid al head-ului curent (seq ' + log.head.seq + ') — normal, root-ul de rețea se actualizează zilnic')
+    : fail('inclusion proof pentru un head care NU apare în chain')
+}
 let h = incl.leafHash
 if (leafHash(incl.salonId, incl.seq, incl.entryHash) !== incl.leafHash) fail('leafHash recomputat diferă')
 for (const sib of incl.proof) h = sib.pos === 'left' ? nodeHash(sib.hash, h) : nodeHash(h, sib.hash)
